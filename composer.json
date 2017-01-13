@@ -1,0 +1,19 @@
+{
+  "name": "jbelich/php_double_ratchet",
+  "type": "library",
+  "description": "A php implementation of the Double Ratchet protocol",
+  "keywords": [],
+  "autoload": {
+    "psr-4": {
+        "jbelich\\DoubleRatchet\\": "src/"
+    }
+  },
+  "config": {
+    "bin-dir": "bin"
+  },
+  "require": {
+    "php": ">=7.0.0",
+    "ext-libsodium": "*",
+    "pimple/pimple" : "~3.0"
+  }
+}
