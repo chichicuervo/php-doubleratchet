@@ -41,13 +41,19 @@ class Protocol {
         return $this;
     }
 
-    public function Decrypt($headertext, $ciphertext)
+    public function Decrypt($header, $ciphertext)
     {
-        if ($plaintext = $this->try_skipped($ciphertext, $headertext)) {
+        if ($plaintext = $this->try_skipped($ciphertext, $header)) {
             return $plaintext;
         }
 
-        $header = $this->state['header']->setString($headertext);
+        if ($header instanceof Header) {
+            $header_string = (string) $header;
+            $this->state['header'] = $header;
+        } else {
+            $header_string = $header;
+            $header = $this->state['header']->setString($header_string);
+        }
         // what about encrypted?
 
         if ($header->isRatchetable()) {
@@ -62,7 +68,7 @@ class Protocol {
         $this->state['recv_num'] = $this->state['recv_num'] + 1; // can't ++ increment a \Container, fya
 
         // return decrypted string
-        $plaintext = $this->state['crypt']->Decrypt($message_key, $headertext, $ciphertext);
+        $plaintext = $this->state['crypt']->Decrypt($message_key, $header_string, $ciphertext);
 
         return $plaintext;
     }
@@ -127,10 +133,17 @@ class Protocol {
         }
     }
 
-    protected function try_skipped($ciphertext, $header_string = NULL)
+    protected function try_skipped($ciphertext, $header = NULL)
     {
-        $header = $this->state['header'];
-        if ($header_string) { // we're encrypted or serialized
+        if ($header) { // we're encrypted or serialized
+            if ($header instanceof Header) {
+                $header_string = (string) $header;
+                $this->state['header'] = $header;
+            } else {
+                $header_string = $header;
+                $header = $this->state['header'];
+            }
+
             if (is_callable([$header, 'decrypt'])) { // we're expecting encrypted header
                 foreach ($this->state['skipped'] as $header_key => $v) {
                     foreach ($v as $recv_num => $message_key) {
@@ -149,6 +162,8 @@ class Protocol {
             } else {
                 $header->setString($header_string);
             }
+        } else {
+            $header = $this->state['header'];
         }
 
         if (!isset($message_key) || !$message_key) {
