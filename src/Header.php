@@ -66,30 +66,30 @@ class Header extends SchemaObject {
         return $this->state['associated_data'] . $this[self::VAR_SERIALIZED_HEADER];
     }
 
-    public function setString($serialized)
+    public function setString($headerstring)
     {
         $this->resetValues();
 
         if (!isset($this->state['associated_data']) || !$this->state['associated_data']) {
-            $len = unpack("V", substr($serialized, 0, 4))[1] ?? 0;
-            $this->state['associated_data'] = substr($serialized, 0, 4 + $len);
-            $serialized = substr($serialized, 4 + $len);
+            $len = unpack("V", substr($headerstring, 0, 4))[1] ?? 0;
+            $this->state['associated_data'] = substr($headerstring, 0, 4 + $len);
+            $headerstring = substr($headerstring, 4 + $len);
 
         } else {
             $len = strlen($this->state['associated_data']);
-            $ad = substr($serialized, 0, $len);
+            $ad = substr($headerstring, 0, $len);
             if ($this->state['associated_data'] != $ad) {
                 throw new \UnexpectedValueException('Session associated_data does not match Header associated_data');
             }
-            $serialized = substr($serialized, $len);
+            $headerstring = substr($headerstring, $len);
         }
 
         $key_length = 32; // this needs to be a state var or accessible in $crypt
 
-        $this[self::VAR_REMOTE_PUBLIC_KEY] = substr($serialized, 0, $key_length);
-        $this[self::VAR_PREV_NUM] = unpack("V", substr($serialized, $key_length, 4))[1] ?: 0;
-        $this[self::VAR_SEND_NUM] = unpack("V", substr($serialized, $key_length + 4, 4))[1] ?: 0;
-        $this[self::VAR_SERIALIZED_HEADER] = $serialized;
+        $this[self::VAR_REMOTE_PUBLIC_KEY] = substr($headerstring, 0, $key_length);
+        $this[self::VAR_PREV_NUM] = unpack("V", substr($headerstring, $key_length, 4))[1] ?: 0;
+        $this[self::VAR_SEND_NUM] = unpack("V", substr($headerstring, $key_length + 4, 4))[1] ?: 0;
+        $this[self::VAR_SERIALIZED_HEADER] = $headerstring;
 
         return $this;
     }
