@@ -8,9 +8,25 @@ use jbelich\DoubleRatchet\Protocol;
 
 interface KdfInterface {
 
+    /**
+     * HKDF function to generate next Root Key and next send|receive Chain key
+     *
+     * @param int $mode Kdf::MODE_SENDER|Kdf::MODE_RECEIVER
+     * @param array $options array of function defaults.
+     *
+     * @return string (send|receive)_chain_key
+     */
     public function nextChainKey($mode, array $options = []);
 
-    public function nextMessageKey($mode, array $options = []);
+    /**
+     * KDF function to generate next Message Key and next Send|Receive Chain Key
+     *
+     * @param int $mode Kdf::MODE_SENDER|Kdf::MODE_RECEIVER
+     * @param array $options array of function defaults.
+     *
+     * @return string $message_key
+     */
+     public function nextMessageKey($mode, array $options = []);
 
 }
 
@@ -26,6 +42,15 @@ class Kdf extends SchemaObject {
     const VAR_KEY_LENGTH      = 'key_length';
     const VAR_SHARED_SALT     = 'shared_salt';
 
+    /**
+     * Static Factory function to choose KDFs
+     *
+     * @param State $obj State object
+     * @param array $options array of function defaults. Supported keys:
+     *      [ kdf_class => Class name for KDF function to be invoked (Default: HashHmac)]
+     *
+     * @return KdfInterface $kdf
+     */
     static public function factory($state, array $options = [])
     {
         $options = $options + [
@@ -40,6 +65,18 @@ class Kdf extends SchemaObject {
         return new $options['kdf_class']($state, $options);
     }
 
+    /**
+     * base constructor
+     *
+     * @param State $obj State object
+     * @param array $options array of function defaults. Supported keys:
+     *      [
+     *          kdf_schema => additional schema keys (Default: [])
+     *          kdf_defaults => additional schema default values (Default: [])
+     *      ]
+     *
+     * @return KdfInterface $kdf
+     */
     protected function __construct($state, array $options = [])
     {
         $this->setState($state);

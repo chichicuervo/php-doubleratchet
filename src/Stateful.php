@@ -4,10 +4,22 @@ namespace jbelich\DoubleRatchet;
 
 use jbelich\DoubleRatchet\SchemaObject;
 
+/**
+ * Trait to simplify object accesss to the DoubleRatchet\State
+ */
 trait Stateful {
 
     protected $state;
 
+    /**
+     * $state settor
+     *
+     * @param array|ArrayAccess $state Protocol State Object
+     *
+     * @return self
+     *
+     * @throws InvalidArgumentException
+     */
     public function setState($state)
     {
         if (!is_array($state) && !$state instanceof \ArrayAccess) {
@@ -19,6 +31,11 @@ trait Stateful {
         return $this;
     }
 
+    /**
+     * $state gettor
+     *
+     * @return array|ArrayAccess
+     */
     public function getState()
     {
         if (!isset($this->state)) {
@@ -28,6 +45,11 @@ trait Stateful {
         return $this->state;
     }
 
+    /**
+     * Syntactic sugar to overload ArrayAccess's offsetGet()
+     *
+     * @throws BadMethodCallException if host class is not ArrayAccess 
+     */
     public function offsetGet($offset)
     {
         if (!$this instanceof \ArrayAccess) {

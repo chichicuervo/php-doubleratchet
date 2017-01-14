@@ -2,6 +2,15 @@
 
 namespace jbelich\DoubleRatchet;
 
+/**
+ * A simple ArrayAccess container which enforces a schema.
+ *
+ * To use, extend this class.  Set allowed var names as constants in the form of:
+ *      const VAR_MY_VAR_NAME = 'my_var_name'
+ *
+ * and set default values in the form of:
+ *      const DEFAULT_MY_VAR_NAME = 'my value';
+ */
 abstract class SchemaObject implements \ArrayAccess {
 
     protected $schema = [];
@@ -84,7 +93,7 @@ abstract class SchemaObject implements \ArrayAccess {
             throw new \InvalidArgumentException(sprintf('Identifier "%s" is not defined.', $offset));
         }
 
-        return isset($this->values[$offset]) && !is_null($this->values[$offset]);
+        return (isset($this->values[$offset]) && !is_null($this->values[$offset])); // || (isset($this->defaults[$offset]) && !is_null($this->defaults[$offset]));
     }
 
     public function offsetExists($offset)

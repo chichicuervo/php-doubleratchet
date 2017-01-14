@@ -7,10 +7,18 @@ use jbelich\DoubleRatchet\Kdf;
 use jbelich\DoubleRatchet\Header;
 use jbelich\DoubleRatchet\DefaultContainer as Container;
 
+/**
+ * Stores the current DoubleRatchet session state
+ */
 class State implements \ArrayAccess, \Serializable {
 
     private $container;
 
+    /**
+     * @param int $mode
+     * @param array $values initial default values
+     * @param array $options
+     */
     public function __construct($mode, array $values = NULL, array $options = [])
     {
         $options = ['mode' => $mode] + $options;
@@ -20,6 +28,11 @@ class State implements \ArrayAccess, \Serializable {
         }
     }
 
+    /**
+     * Sets the $state object data from array
+     *
+     * @param array $state [$options, $values]
+     */
     public function fromArray(array $state)
     {
         $options = $state[0];
@@ -38,7 +51,7 @@ class State implements \ArrayAccess, \Serializable {
             'kdf' => function ($c) use ($options) {
                 return Kdf::factory($c, $options);
             },
-            'header' => function ($c) use ($options) { 
+            'header' => function ($c) use ($options) {
                 return Header::factory($c, $options);
             },
             'local_key_pair' => function ($c) use ($options) {
@@ -59,6 +72,11 @@ class State implements \ArrayAccess, \Serializable {
         return $this;
     }
 
+    /**
+     * Gets an array representation of the $state object, for sleep purposes
+     *
+     * @return array [$options, $values];
+     */
     public function toArray()
     {
         $options = [

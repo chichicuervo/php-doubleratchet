@@ -13,6 +13,27 @@ class HashHmac extends Kdf implements KdfInterface {
 
     protected $schema = ['extra_keys', 'hash_algo'];
 
+    /**
+     * HKDF function to generate next Root Key and next send|receive Chain key
+     *
+     * @param int $mode Kdf::MODE_SENDER|Kdf::MODE_RECEIVER
+     * @param array $options array of function defaults. supported keys:
+     *      [
+     *          hash_algo => Hash digest algorithm (Default: $state[hash_algo] or sha512),
+     *          num_keys => number of keys to generate (Default: 2 [root key and next chain key]),
+     *          key_length => key length in bytes (Default: $state[key_length] or 32),
+     *          shared_salt => Shared Salt for HMAC generation (Default: $state[shared_salt] or "\jbelich\DoubleRatchet\Kdf")
+     *          chain_key_name => which chain key to update (Default determined by $mode)
+     *      ]
+     *
+     * @return string (send|receive)_chain_key
+     *
+     * @throws InvalidArgumentException
+     * @throws UnexpectedValueException
+     * @throws UnderflowException
+     * @throws OutOfBoundsException
+     * @throws LogicException
+     */
     public function nextChainKey($mode, array $options = [])
     {
         if ($mode !== self::MODE_SENDER && $mode != self::MODE_RECEIVER) {
@@ -28,7 +49,7 @@ class HashHmac extends Kdf implements KdfInterface {
         }
 
         $options = $options + [
-            'algo' => $this['hash_algo'] ?? self::DEFAULT_ALGO,
+            'hash_algo' => $this['hash_algo'] ?? self::DEFAULT_ALGO,
             'num_keys' => self::DEFAULT_NUM_KEYS,
             'key_length' => $this[self::VAR_KEY_LENGTH],
             'shared_salt' => $this[self::VAR_SHARED_SALT],
@@ -43,10 +64,10 @@ class HashHmac extends Kdf implements KdfInterface {
         }
 
         $new_shared = $this->state['crypt']->makeSharedSecret($this->state['local_key_pair'], $this->state['remote_public_key'], $mode);
-        $prekey     = hash_hmac($options['algo'], $new_shared, $this->state['root_key'], TRUE);
+        $prekey     = hash_hmac($options['hash_algo'], $new_shared, $this->state['root_key'], TRUE);
 
         for ($key = $block = '', $i = 1, $l = $options['key_length'] * $options['num_keys'] ; strlen($key) < $l ; $i++) {
-            $key .= $block = hash_hmac($options['algo'], $block . $options['shared_salt'] . chr($i), $prekey, TRUE);
+            $key .= $block = hash_hmac($options['hash_algo'], $block . $options['shared_salt'] . chr($i), $prekey, TRUE);
         }
 
         if (FALSE === ($keys = str_split($key, $options['key_length']))) {
@@ -65,6 +86,22 @@ class HashHmac extends Kdf implements KdfInterface {
         return $this->state[$options['chain_key_name']];
     }
 
+    /**
+     * KDF function to generate next Message Key and next Send|Receive Chain Key
+     *
+     * @param int $mode Kdf::MODE_SENDER|Kdf::MODE_RECEIVER
+     * @param array $options array of function defaults. supported keys:
+     *      [
+     *          hash_algo => Hash digest algorithm (Default: $state[hash_algo] or sha512),
+     *          key_length => key length in bytes (Default: $state[key_length] or 32),
+     *          chain_key_name => which chain key to update (Default determined by $mode)
+     *      ]
+     *
+     * @return string $message_key
+     *
+     * @throws InvalidArgumentException
+     * @throws OutOfBoundsException
+     */
     public function nextMessageKey($mode, array $options = [])
     {
         if ($mode !== self::MODE_SENDER && $mode != self::MODE_RECEIVER) {
@@ -72,7 +109,7 @@ class HashHmac extends Kdf implements KdfInterface {
         }
 
         $options = $options + [
-            'algo' => $this['hash_algo'] ?? self::DEFAULT_ALGO,
+            'hash_algo' => $this['hash_algo'] ?? self::DEFAULT_ALGO,
             'key_length' => $this[self::VAR_KEY_LENGTH],
             'chain_key_name' => $mode === self::MODE_SENDER ? 'sender_chain_key' : 'receive_chain_key'
         ];
@@ -82,8 +119,8 @@ class HashHmac extends Kdf implements KdfInterface {
 
         $chain_key = $this->state[$options['chain_key_name']];
 
-        $this->state[$options['chain_key_name']] = substr(hash_hmac($options['algo'], 0x02, $chain_key, TRUE), 0, $options['key_length']);
+        $this->state[$options['chain_key_name']] = substr(hash_hmac($options['hash_algo'], 0x02, $chain_key, TRUE), 0, $options['key_length']);
 
-        return substr(hash_hmac($options['algo'], 0x01, $chain_key, TRUE), 0, $options['key_length']);
+        return substr(hash_hmac($options['hash_algo'], 0x01, $chain_key, TRUE), 0, $options['key_length']);
     }
 }
