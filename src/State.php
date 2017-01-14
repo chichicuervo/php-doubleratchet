@@ -31,7 +31,13 @@ class State implements \ArrayAccess, \Serializable {
     /**
      * Sets the $state object data from array
      *
-     * @param array $state [$options, $values]
+     * @param array $state [$options, $values]. Supported $options keys:
+     *      [
+     *          remote_public_key,
+     *          associated_data => the AD required for AEAD encryption. (Default NULL = AD is generated from random bytes),
+     *          local_key_pair => Your local Diffie-Hellman keypair (Default = generated from Crypt object),
+     *          shared_key => Initial Diffie-Hellman shared secret, or most recent Root Key (Default: generated from local_key_pair and remote_public_key)
+     *      ]
      */
     public function fromArray(array $state)
     {
