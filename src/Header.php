@@ -28,8 +28,8 @@ class Header extends SchemaObject {
 
     const VAR_REMOTE_PUBLIC_KEY = 'remote_public_key';
     const VAR_LOCAL_PUBLIC_KEY = 'local_public_key';
-    const VAR_PREV_NUM = 'prev_num';
-    const VAR_SEND_NUM = 'send_num';
+    const VAR_PREV_NUM = 'prev_iter';
+    const VAR_SEND_NUM = 'send_iter';
 
     const VAR_SERIALIZED_HEADER = 'serialized_header';
 

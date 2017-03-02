@@ -39,9 +39,9 @@ class Protocol {
         }
 
         $this->state = new State($mode, [
-            'send_num' => 0,
-            'recv_num' => 0,
-            'prev_num' => 0,
+            'send_iter' => 0,
+            'recv_iter' => 0,
+            'prev_iter' => 0,
             'skipped'  => [],
         ], $options);
     }
@@ -75,15 +75,15 @@ class Protocol {
         // what about encrypted?
 
         if ($header->isRatchetable()) {
-            $this->skip($header['prev_num']);
+            $this->skip($header['prev_iter']);
             $this->ratchet();
         }
-        $this->skip($header['send_num']);
+        $this->skip($header['send_iter']);
         $header->resetValues(); // resetValues() only resets local object changes. Serialization reverts to $state then defaults
 
         $message_key = $this->state['kdf']->nextMessageKey(self::MODE_RECEIVER);
 
-        $this->state['recv_num'] = $this->state['recv_num'] + 1; // can't ++ increment a \Container, fya
+        $this->state['recv_iter'] = $this->iterate($this->state['recv_iter']);
 
         // return decrypted string
         $plaintext = $this->state['crypt']->Decrypt($message_key, $header_string, $ciphertext);
@@ -105,7 +105,7 @@ class Protocol {
             $this->state['crypt']->Encrypt($this->state['kdf']->nextMessageKey(self::MODE_SENDER), $headerstring, $plaintext)
         ];
 
-        $this->state['send_num'] = $this->state['send_num'] + 1; // can't ++ increment a \Container, fya
+        $this->state['send_iter'] = $this->iterate($this->state['send_iter']);
 
         return $cipher;
     }
@@ -115,9 +115,9 @@ class Protocol {
         unset($this->state['sender_chain_key']);
         $this->state['remote_public_key'] = $this->state['header']['remote_public_key'];
 
-        $this->state['prev_num'] = $this->state['send_num']; // should this be from header insteader?
-        $this->state['send_num'] = 0;
-        $this->state['recv_num'] = 0;
+        $this->state['prev_iter'] = $this->state['send_iter']; // should this be from header insteader?
+        $this->state['send_iter'] = 0;
+        $this->state['recv_iter'] = 0;
 
         $this->state['kdf']->nextChainKey(self::MODE_RECEIVER);
         $this->state['local_key_pair'] = $this->state['crypt']->makeKeypair();
@@ -127,15 +127,11 @@ class Protocol {
     {
         $max = isset($this->state['skip_max']) ? $this->state['skip_max'] : self::DEFAULT_SKIP_MAX;
 
-        if ($this->state['recv_num'] + $max < $until) {
-            throw new \OutOfBoundsException();
-        }
-
         if (isset($this->state['receive_chain_key']) && $this->state['receive_chain_key']) {
             $skip_key_name = is_callable([$this->state['header'], 'decrypt']) ? 'receive_header_key' : 'remote_public_key';
             $skipped = $this->state['skipped']; // stupid ArrayAccess indirect modification bullshit
 
-            while ($this->state['recv_num'] < $until) { // shoudl recv_num use $header?
+            for ($i = 0, $recv_key = $this->state['recv_iter'] ; $recv_key != $until && $i < $max ; $i++) { // shoudl recv_key use $header?
                 if (!isset($this->state[$skip_key_name])) {
                     throw new \Exception; // should it retry/restart?
                 }
@@ -144,9 +140,10 @@ class Protocol {
                 $skip_key = $this->state[$skip_key_name];
 
                 $skipped[$skip_key] = $skipped[$skip_key] ?? [];
-                $skipped[$skip_key][$this->state['recv_num']] = $message_key;
-                $this->state['recv_num'] = $this->state['recv_num'] + 1; // can't ++ increment a \Container, fya
+                $skipped[$skip_key][$recv_key] = $message_key;
+                $recv_key = $this->iterate($recv_key);
             }
+            $this->state['recv_iter'] = $recv_key;
             $this->state['skipped'] = $skipped;
         }
     }
@@ -164,9 +161,9 @@ class Protocol {
 
             if (is_callable([$header, 'decrypt'])) { // we're expecting encrypted header
                 foreach ($this->state['skipped'] as $header_key => $v) {
-                    foreach ($v as $recv_num => $message_key) {
+                    foreach ($v as $recv_iter => $message_key) {
                         if ($decrypted = $header->decrypt($header_key, $header_string)) {
-                            unset($this->state['skipped'][$header_key][$recv_num]);
+                            unset($this->state['skipped'][$header_key][$recv_iter]);
                             break 2;
                         }
                     }
@@ -195,9 +192,9 @@ class Protocol {
             if ($skip_key && isset($this->state['skipped'][$skip_key])) {  // fuck you indirect modification of overloaded element!!!!!!!!
                 $skipped = $this->state['skipped'];
 
-                if (isset($skipped[$skip_key][$header['send_num']])) {
-                    $message_key = $skipped[$skip_key][$header['send_num']];
-                    unset($skipped[$skip_key][$header['send_num']]);
+                if (isset($skipped[$skip_key][$header['send_iter']])) {
+                    $message_key = $skipped[$skip_key][$header['send_iter']];
+                    unset($skipped[$skip_key][$header['send_iter']]);
                 }
                 $this->state['skipped'] = $skipped;
             }
@@ -209,5 +206,10 @@ class Protocol {
         }
 
         return $this->state['crypt']->Decrypt($message_key, (string) $header, $ciphertext);
+    }
+
+    protected function iterate($value)
+    {
+        return $value + 1;
     }
 }
