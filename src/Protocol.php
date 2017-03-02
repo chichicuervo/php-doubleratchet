@@ -39,9 +39,9 @@ class Protocol {
         }
 
         $this->state = new State($mode, [
-            'send_iter' => 0,
-            'recv_iter' => 0,
-            'prev_iter' => 0,
+            'send_iter' => $options['default_iter'] ?? 0,
+            'recv_iter' => $options['default_iter'] ?? 0,
+            'prev_iter' => $options['default_iter'] ?? 0,
             'skipped'  => [],
         ], $options);
     }
@@ -95,6 +95,8 @@ class Protocol {
     {
         if(!isset($this->state['sender_chain_key'])) {
             $this->state['kdf']->nextChainKey(self::MODE_SENDER);
+            $this->state['send_iter'] = $r = $this->reset_iterator();
+            $this->state['recv_iter'] = $r;
         }
         if(!isset($this->state['sender_chain_key'])) {
             throw new \Exception;
@@ -115,11 +117,12 @@ class Protocol {
         unset($this->state['sender_chain_key']);
         $this->state['remote_public_key'] = $this->state['header']['remote_public_key'];
 
-        $this->state['prev_iter'] = $this->state['send_iter']; // should this be from header insteader?
-        $this->state['send_iter'] = 0;
-        $this->state['recv_iter'] = 0;
-
         $this->state['kdf']->nextChainKey(self::MODE_RECEIVER);
+
+        $this->state['prev_iter'] = $this->state['send_iter']; // should this be from header insteader?
+        $this->state['send_iter'] = $r = $this->reset_iterator();
+        $this->state['recv_iter'] = $r;
+
         $this->state['local_key_pair'] = $this->state['crypt']->makeKeypair();
     }
 
@@ -211,5 +214,10 @@ class Protocol {
     protected function iterate($value)
     {
         return $value + 1;
+    }
+
+    protected function reset_iterator()
+    {
+        return $this->state['init_opts']['default_iter'] ?? 0;
     }
 }

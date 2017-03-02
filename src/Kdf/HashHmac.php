@@ -68,7 +68,7 @@ class HashHmac extends Kdf implements KdfInterface {
 
         $options = $options + [
             'hash_algo' => $this['hash_algo'] ?? self::DEFAULT_ALGO,
-            'num_keys' => self::DEFAULT_NUM_KEYS,
+            'num_keys' => $this->state['init_opts']['num_keys'] ?? self::DEFAULT_NUM_KEYS,
             'key_length' => $this[self::VAR_KEY_LENGTH],
             'shared_salt' => $this[self::VAR_SHARED_SALT],
             'chain_key_name' => $mode === self::MODE_SENDER ? 'sender_chain_key' : 'receive_chain_key'

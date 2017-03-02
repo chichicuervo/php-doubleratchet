@@ -40,9 +40,9 @@ abstract class SchemaObject implements \ArrayAccess {
         $constants = (new \ReflectionClass(get_class($this)))->getConstants();
 
         $vars = array_intersect_key($constants, array_flip(preg_grep('/^VAR_/', array_keys($constants))));
-        $this->setSchema(array_unique(array_values($schema)
-            + array_values($vars)
-            + $this->schema));
+        $this->setSchema(array_unique(array_merge(array_values($schema)
+            , array_values($vars)
+            , $this->schema)));
 
         $vals = array_intersect_key($constants, array_flip(preg_grep('/^DEFAULT_/', array_keys($constants))));
         $nvals = [];
