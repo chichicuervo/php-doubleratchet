@@ -79,14 +79,14 @@ class Protocol {
             $this->ratchet();
         }
         $this->skip($header['send_iter']);
-        $header->resetValues(); // resetValues() only resets local object changes. Serialization reverts to $state then defaults
 
         $message_key = $this->state['kdf']->nextMessageKey(self::MODE_RECEIVER);
 
-        $this->state['recv_iter'] = $this->iterate($this->state['recv_iter']);
-
         // return decrypted string
         $plaintext = $this->state['crypt']->Decrypt($message_key, $header_string, $ciphertext);
+
+        $this->state['recv_iter'] = $this->iterate($this->state['recv_iter']);
+        $header->resetValues(); // resetValues() only resets local object changes. Serialization reverts to $state then defaults
 
         return $plaintext;
     }
